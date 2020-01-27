@@ -1,4 +1,4 @@
-function [ut1,ut2,ut3,ut4,data_exp0,data_exp16,data_exp32,data_exp48] = forward_solve(Dr,Dg,kr,kg,do_synthetic)
+function [u_xtc_array] = forward_solve(Dr,Dg,kr,kg,initial_condition,output_times_list)
 %This MATLAB code reads in experimental data from Vittadello et al. (2018),
 %solves the PDE model and plots the evolution of the solution of the PDE
 %onto the data.  The code also calculates the total number of red and green
@@ -9,6 +9,9 @@ function [ut1,ut2,ut3,ut4,data_exp0,data_exp16,data_exp32,data_exp48] = forward_
 % OJM. 2 October 2019 - just wrapped Implicit_Solver_RG_LinearDiffusion in function.
 % Returns solutions and data.
 %
+
+% 17 Jan 2019. Need to convert to write out at arbitrary list of times
+
 tic
 
 L=1242; %length of domain
@@ -22,57 +25,35 @@ tf=48.0; %duration of the experiment
 tol=1e-10;
 maxsteps=tf/dt;
 N=L/dx+1;
+%M; Number of time points to output
 %n_r=zeros(4,1);
 %n_g=zeros(4,1);
 %n_tot=zeros(4,1);
 
-
+M = length(output_times_list);
 
 u=zeros(N,2);   %this is the solution that is marched through time
-ut1=zeros(N,2); %this is the solution stored at t=0
-ut2=zeros(N,2); %this is the solution stored at t=16
-ut3=zeros(N,2); %this is the solution stored at t=32
-ut4=zeros(N,2); %This is the solution stored at t=48
+
+%ut1=zeros(N,2); %this is the solution stored at t=0
+%ut2=zeros(N,2); %this is the solution stored at t=16
+%ut3=zeros(N,2); %this is the solution stored at t=32
+%ut4=zeros(N,2); %This is the solution stored at t=48
+
+u_xtc_array = zeros(N,M,2); %N space, M time, 2 colors
+
 pu=zeros(N,2); %previous solution that is stored
 u_update=zeros(N,2);
 x=zeros(N,1);
 
-
-data_interp0=zeros(N,2);  %this is the experimental data interpolated at t=0
-%data_interp16=zeros(N,2); %this is the experimental data interpolated at t=16
-%data_interp32=zeros(N,2); %this is the experimental data interpolated at t=32
-%data_interp48=zeros(N,2); %This is the experimental data interpolated at t=48
-
-
-if do_synthetic == true
-    %synthetic
-    %'using synthetic'
-    data0=load('datat0_syn.txt');
-    data16=load('datat16_syn.txt');
-    data32=load('datat32_syn.txt');
-    data48=load('datat48_syn.txt');
-    
-else
-    %actual
-    data0=load('datat0.txt');
-    data16=load('datat16.txt');
-    data32=load('datat32.txt');
-    data48=load('datat48.txt');
-end
-
-data_exp0 = data0(:,2:3);
-data_exp16 = data16(:,2:3);
-data_exp32 = data32(:,2:3);
-data_exp48 = data48(:,2:3);
 
 
 %NRed_data=[286 533 663 932];
 %NGreen_data=[234 243 286 317];
 %NTotal_data=NRed_data+NGreen_data;
 
-xi=(0:dx:1242)';
-data_interp0(:,1)=interp1q(data0(:,1),data0(:,2),xi); %this is the experimental red   data interpolated at t=0
-data_interp0(:,2)=interp1q(data0(:,1),data0(:,3),xi); %this is the experimental green data interpolater at t=0
+%xi=(0:dx:1242)';
+%data_interp0(:,1)=interp1q(data0(:,1),data0(:,2),xi); %this is the experimental red   data interpolated at t=0
+%data_interp0(:,2)=interp1q(data0(:,1),data0(:,3),xi); %this is the experimental green data interpolater at t=0
 
 %data_interp16(:,1)=interp1q(data16(:,1),data16(:,2),xi); %this is the experimental red   data interpolated at t=16
 %data_interp16(:,2)=interp1q(data16(:,1),data16(:,3),xi); %this is the experimental green data interpolater at t=16
@@ -84,8 +65,8 @@ data_interp0(:,2)=interp1q(data0(:,1),data0(:,3),xi); %this is the experimental 
 %data_interp48(:,2)=interp1q(data48(:,1),data48(:,3),xi); %this is the experimental green data interpolater at t=48
 
 
-u(:,1)=data_interp0(:,1); %this is the initial experimental red data interpolated
-u(:,2)=data_interp0(:,2); %this is the initial experimental green data inerpolated
+u(:,1)=initial_condition(:,1); %this is the initial experimental red data interpolated
+u(:,2)=initial_condition(:,2); %this is the initial experimental green data inerpolated
 
 pu=u;
 
@@ -100,7 +81,7 @@ d=zeros(N,1);
 
 t=0.0;
 
-ut1=u; % this is the solution at t= 0
+u_xtc_array(:,1,:)=u; % this is the solution at t= 0
 %for i=1:N-1
 %n_r(1,1)=n_r(1,1)+0.004*1745*dx*(ut1(i,1)+ut1(i+1,1))/2;
 %n_g(1,1)=n_g(1,1)+0.004*1745*dx*(ut1(i,2)+ut1(i+1,2))/2;
@@ -170,13 +151,17 @@ for i=1:maxsteps
     % fprintf('Iterations %d\n',pic);
     % end
     
-    if abs(t-16)<tol
-        ut2=u; %this is the solution at t = 16
-    elseif abs(t-32)<tol
-        ut3=u; %this is the solution at t = 32
-    elseif abs(t-48)<tol
-        ut4=u; % this is the solution at t=48
+    t_index = find(output_times_list == t);
+    if t_index
+        u_xtc_array(:,t_index,:) = u;
     end
+    %if abs(t-16)<tol
+    %    ut2=u; %this is the solution at t = 16
+    %elseif abs(t-32)<tol
+    %    ut3=u; %this is the solution at t = 32
+    %elseif abs(t-48)<tol
+    %    ut4=u; % this is the solution at t=48
+    %end
     
 end
 

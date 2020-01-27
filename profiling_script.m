@@ -20,19 +20,42 @@ else
     theta_lower_bounds = [0,0,0,0]
     theta_upper_bounds = [5000,5000,1,1]
 end
+sd = 0.05
 
+%% initial condition
+dx=1;
+[data_t0,data_c0,data_c0_interpolated] = load_exp_data_file('datat0.txt',dx);
+initial_condition=data_c0_interpolated;
+
+%% load data to fit
 do_synthetic = true
 %do_synthetic = false
 if do_synthetic
-    sd = 1e-3 %synthetic approx
+    output_times_list = linspace(0,48,49);
+    %output_times_list = linspace(0,16,1000);
+    for i=1:length(output_times_list)
+        [data_ti,data_ci,data_ci_interpolated] = load_exp_data_file('data_xc_'+string(output_times_list(i))+'_syn.txt',dx);
+        if i ==1
+            data_c_all = zeros(size(data_ci,1),length(output_times_list),2);
+        end
+        data_c_all(:,i,:) = data_ci;
+    end
+        
 else
-    sd = 0.05
-    %sd = 0.02
+    output_times_list = [16,32,48];
+    for i=1:length(output_times_list)
+        [data_ti,data_ci,data_ci_interpolated] = load_exp_data_file('datat'+string(output_times_list(i))+'.txt',dx);
+        if i ==1
+            data_c_all = zeros(size(data_ci,1),length(output_times_list),2);
+        end
+        data_c_all(:,i,:) = data_ci;
+    end
 end
 
+%%
 
 f_theta = @(theta) vector_objective(theta(1),theta(2),theta(3),theta(4),...
-    sd,do_synthetic,k_ln_scale)
+    sd,data_c_all,initial_condition,output_times_list,k_ln_scale)
 
 [theta, fval] = lsqnonlin(f_theta,theta0,theta_lower_bounds,...
     theta_upper_bounds,options)
@@ -63,18 +86,9 @@ else
     lambda_upper_bounds = [5000,1,1]
 end
 
-% synthetic or not
-do_synthetic = true
-%do_synthetic = false
-if do_synthetic
-    sd = 0.001 %synthetic approx
-else
-    sd = 0.05
-    %sd = 0.02
-end
-
 % mapping (psi, lambda) -> (theta). Key user input
-f_theta = @(psi, lambda) vector_objective(psi,lambda(1),lambda(2),lambda(3),sd,do_synthetic,k_ln_scale);
+f_theta = @(psi, lambda) vector_objective(psi,lambda(1),lambda(2),lambda(3),sd,...
+    data_c_all,initial_condition,output_times_list,k_ln_scale);
 
 % display and plot options
 do_display_it = true
@@ -119,18 +133,9 @@ else
     lambda_upper_bounds = [5000,1,1]
 end
 
-% synthetic or not
-do_synthetic = true
-%do_synthetic = false
-if do_synthetic
-    sd = 0.001 %synthetic approx
-else
-    sd = 0.05
-    %sd = 0.02
-end
-
 % mapping (psi, lambda) -> (theta). Key user input
-f_theta = @(psi, lambda) vector_objective(lambda(1),psi,lambda(2),lambda(3),sd,do_synthetic,k_ln_scale);
+f_theta = @(psi, lambda) vector_objective(lambda(1),psi,lambda(2),lambda(3),sd,...
+    data_c_all,initial_condition,output_times_list,k_ln_scale);
 
 % display and plot options
 do_display_it = true
@@ -166,11 +171,19 @@ n_psi = 100
 
 if k_ln_scale
     psi_min = log(0.01)
-    psi_max = log(0.05)
+    if do_synthetic
+        psi_max = log(0.1)
+    else
+        psi_max = log(0.05)
+    end
     psi_range = linspace(psi_min,psi_max,n_psi)
 else
     psi_min = 0.001
-    psi_max = 0.05
+    if do_synthetic
+        psi_max = 0.1
+    else
+        psi_max = 0.05
+    end
     psi_range = linspace(psi_min,psi_max,n_psi) 
 end
     
@@ -185,18 +198,9 @@ else
     lambda_upper_bounds = [5000,5000,1]
 end
 
-% synthetic or not
-do_synthetic = true
-%do_synthetic = false
-if do_synthetic
-    sd = 0.001 %synthetic approx
-else
-    sd = 0.05
-    %sd = 0.02
-end
-
 % mapping (psi, lambda) -> (theta). Key user input
-f_theta = @(psi, lambda) vector_objective(lambda(1),lambda(2),psi,lambda(3),sd,do_synthetic,k_ln_scale);
+f_theta = @(psi, lambda) vector_objective(lambda(1),lambda(2),psi,lambda(3),sd,...
+    data_c_all,initial_condition,output_times_list,k_ln_scale);
 
 % display and plot options
 do_display_it = true
@@ -230,11 +234,19 @@ n_psi = 100 %50
 
 if k_ln_scale
     psi_min = log(0.04)
-    psi_max = log(0.1)
+    if do_synthetic
+        psi_max = log(0.15)
+    else
+        psi_max = log(0.1)
+    end
     psi_range = linspace(psi_min,psi_max,n_psi)
 else
     psi_min = 0.04
-    psi_max = 0.1
+    if do_synthetic
+        psi_max = 0.15
+    else
+        psi_max = 0.1
+    end
     psi_range = linspace(psi_min,psi_max,n_psi) 
 end
     
@@ -249,18 +261,9 @@ else
     lambda_upper_bounds = [5000,5000,1]
 end
 
-% synthetic or not
-do_synthetic = true
-%do_synthetic = false
-if do_synthetic
-    sd = 0.001 %synthetic approx
-else
-    sd = 0.05
-    %sd = 0.02
-end
-
 % mapping (psi, lambda) -> (theta). Key user input
-f_theta = @(psi, lambda) vector_objective(lambda(1),lambda(2),lambda(3),psi,sd,do_synthetic,k_ln_scale);
+f_theta = @(psi, lambda) vector_objective(lambda(1),lambda(2),lambda(3),psi,sd,...
+    data_c_all,initial_condition,output_times_list,k_ln_scale);
 
 % display and plot options
 do_display_it = true
@@ -305,18 +308,9 @@ else
     lambda_upper_bounds = [5000,1,1]
 end
 
-% synthetic or not
-do_synthetic = true
-%do_synthetic = false
-if do_synthetic
-    sd = 0.001 %synthetic approx
-else
-    sd = 0.05
-    %sd = 0.02
-end
-
 % mapping (psi, lambda) -> (theta). Key user input
-f_theta = @(psi, lambda) vector_objective(lambda(1)+psi,lambda(1),lambda(2),lambda(3),sd,do_synthetic,k_ln_scale);
+f_theta = @(psi, lambda) vector_objective(lambda(1)+psi,lambda(1),lambda(2),lambda(3),sd,...
+    data_c_all,initial_condition,output_times_list,k_ln_scale);
 
 % display and plot options
 do_display_it = true;
